@@ -1,185 +1,246 @@
 # LunWen CYZ
 
-> **CLI Agent for long-form academic writing with quality evaluation loops, traceable execution, and agent-readable knowledge base.**
+> A CLI-first Agent for long-form academic writing: state-machine orchestration, multi-source literature retrieval, quality evaluation loops, traceable JSONL execution, and agent-readable module docs.
 
-一个面向长文本生成的 CLI Agent：状态机驱动的流程编排、多源文献检索、逐章生成与修订、LLM 评分 + 静态规则双重质量评估、JSONL 运行诊断与可解释指标。
+LunWen CYZ is not a "call an LLM and generate a paper" script. It is an experiment in turning a vague, high-friction writing task into an inspectable Agent workflow: parse materials, plan an outline, retrieve references, draft section by section, evaluate quality, revise with actionable feedback, and leave enough traces for a human or another Agent to debug the run.
 
----
+The project was built around a practical question:
 
-## 为什么这是一个 Agent 项目
-
-不是「调 API 生成一段文字」的脚本。区别在这里：
-
-| 维度 | 普通脚本 | 这个项目 |
-|------|----------|----------|
-| **流程控制** | 线性顺序执行 | 状态机：`PARSE → PLAN → SEARCH → DRAFT ⇄ EVAL ⇄ REVISE → DONE` |
-| **决策闭环** | 一次生成 | 评估→修订→再评估，error 清零 + 低分保护双门禁 |
-| **可观测性** | 无 | JSONL 事件流 + 阶段耗时 + 规则命中/消解率 + 用户时间节省估算 |
-| **模块文档** | 无或过时 | 4 个 Agent 入口 README（含 YAML front matter / `sync_rule` 维护契约） |
-| **测试** | 无 | 54 项离线测试 + fixture 引擎 + 大纲规则验证 + 配置 schema 检查 |
-| **隐私** | 密钥硬编码 | `local.secrets.yml` 不进 Git，运行时产物全部 `.gitignore` |
+> Can a CLI Agent make long-form generation more controllable, observable, and maintainable than a one-shot prompt?
 
 ---
 
-## 架构总览
+## Why This Project Matters
 
+Long-form AI writing often fails in ways that are hard to see until the end: chapter drift, broken citations, hallucinated technical details, inconsistent terminology, missing sections, and vague "looks good" evaluations. This project treats those failures as engineering problems rather than prompt wording problems.
+
+It introduces:
+
+- **A real Agent control loop**: `PARSE -> PLAN -> SEARCH -> DRAFT -> EVAL -> REVISE -> DONE`
+- **CLI-first operation**: interactive mode, batch arguments, phase-level debugging, session recovery, and independent paper evaluation
+- **Quality gates**: static rules plus LLM scoring, with error/warning severity and actionable revision items
+- **Traceability**: JSONL event logs, phase timing, rule hit counts, issue resolution metrics, and explainability summaries
+- **Fact constraints**: generated TechSpec plus user-locked technical facts injected into writing and revision prompts
+- **Agent-readable docs**: module README files with YAML front matter and `sync_rule` contracts for future contributors or coding Agents
+
+---
+
+## What Makes It an Agent
+
+| Dimension | Simple LLM Script | LunWen CYZ |
+| --- | --- | --- |
+| Workflow | One linear generation call | State-machine orchestration across parsing, planning, search, drafting, evaluation, revision, and finalization |
+| Control | Hidden prompt flow | CLI parameters, phase-level execution, resumable plans, and independent evaluation |
+| Decision loop | Generate once | Evaluate, revise, re-evaluate, and stop by quality threshold or rule pass conditions |
+| Grounding | Prompt-only context | Parsed user materials, manual references, public literature APIs, TechSpec, and locked technical facts |
+| Observability | Console text at best | JSONL trace, diagnosis commands, explainability metrics, and cross-round issue deltas |
+| Maintainability | Code is the only source of truth | Agent-readable module docs, sync rules, tests, fixtures, and progress notes |
+| Privacy posture | Often unclear | Secrets, uploads, outputs, cache, and generated papers are excluded by default |
+
+---
+
+## Core Capabilities
+
+### 1. CLI Agent Workflow
+
+`main.py` exposes an argparse-based command-line interface:
+
+```bash
+python main.py
+python main.py --files proposal.docx report.pdf --refs references.bib
+python main.py --request "Write a thesis about V2X resource allocation" --files design.pdf
+python main.py --locked-tech-spec config/locked_tech_spec.example.json
+python main.py --session <session_id>
 ```
-main.py                     # CLI 入口（argparse）
-  └── controller.py         # 状态机决策控制器
-        ├── parser.py       # 多格式文件解析（docx/pdf/pptx/xlsx/csv/txt/图片）
-        ├── planner.py      # 意图理解 + 大纲生成 + 大纲评分门禁（28 条硬规则 + LLM 五维语义评分）
-        ├── retriever.py    # OpenAlex / Crossref / arXiv / Semantic Scholar 自适应检索
-        ├── ref_store.py    # 文献池管理（去重、质量清洗、同义词映射）
-        ├── writing/        # 撰写子包
-        │   ├── draft_engine.py     # 逐章生成（并行/串行、多候选、scope 校验）
-        │   ├── revision_engine.py  # 逐章修订（最小干预原则、顽固问题专项修复）
-        │   ├── abstract.py         # 中英文摘要生成与校验
-        │   ├── postprocess.py      # 后处理（引用位置、术语统一、越界清洗、标点）
-        │   ├── term_map.py         # 全文术语映射（主控/传感器型号统一）
-        │   ├── tech_spec.py        # LLM 技术规格生成
-        │   └── locked_tech_spec.py # 用户锁定技术事实（L1）
-        ├── validation/     # 评估子包
-        │   └── evaluator.py        # LLM 四维评分 + 毕业论文静态规则（error/warning 分级）
-        ├── diagnosis/      # 可观测性子包（零 LLM 依赖）
-        │   ├── recorder.py         # JSONL 结构化事件采集
-        │   ├── analyzer.py         # 规则聚合
-        │   ├── metrics.py          # 可解释指标计算（生成耗时、规则命中/消解率、用户时间节省）
-        │   └── report.py           # Rich 终端报告
-        └── presenter.py    # 评估面板渲染（跨轮差分、顽固问题追踪）
+
+The CLI supports both interactive use and reproducible batch-style runs. It can also auto-detect files under `doc/` for local workflows.
+
+### 2. Phase-Level Debugging
+
+Long Agent runs need breakpoints. LunWen CYZ supports staged execution:
+
+```bash
+# Run only to outline planning
+python main.py --phase plan --files proposal.docx
+
+# Continue from an existing plan
+python main.py --phase draft --plan outputs/plan_xxx.json
+
+# Evaluate an existing Markdown paper without re-running generation
+python main.py --phase eval --plan outputs/plan_xxx.json --paper outputs/paper_xxx.md
+```
+
+This makes the Agent easier to debug, replay, and demonstrate.
+
+### 3. Multi-Source Retrieval and Reference Pool
+
+The retrieval layer integrates public academic sources:
+
+- OpenAlex
+- Crossref
+- arXiv
+- Semantic Scholar
+- Manual `.bib` / `.csv` reference imports
+
+References are merged, deduplicated, scored, and stored in a local reference pool.
+
+### 4. Quality Evaluation Loop
+
+The project combines static checks and LLM-based evaluation. Static rules inspect issues such as:
+
+- abstract length and citation markers
+- citation position
+- chapter overflow
+- missing subsections
+- placeholder residue
+- model / hardware terminology consistency
+- citation scope violations
+
+The LLM evaluator produces structured scores and actionable revision items. The controller then decides whether to stop, revise, or run targeted fixes for stubborn issues.
+
+### 5. Traceable Execution
+
+Each run can emit structured JSONL events under `outputs/run_<session>.jsonl`. Diagnosis tools can summarize:
+
+- phase transitions
+- total wall time
+- generation time
+- rule hits
+- issue resolution rate
+- user time saved estimate
+- stubborn issue trends
+
+```bash
+python -m src.diagnosis outputs/run_<session_id>.jsonl
+
+python -c "from src.diagnosis import print_explainability_summary; print_explainability_summary('outputs/run_xxx.jsonl')"
+```
+
+### 6. Agent-Readable Knowledge Base
+
+This repository intentionally keeps module docs close to code. These files are designed for humans and coding Agents:
+
+| Module | Entry doc | Purpose |
+| --- | --- | --- |
+| Writing | [`src/writing/README.md`](src/writing/README.md) | Drafting, revision, TechSpec, term mapping, post-processing, public APIs |
+| Validation | [`src/validation/README.md`](src/validation/README.md) | Scoring system, static rules, fallback behavior, evaluator contract |
+| Diagnosis | [`src/diagnosis/README.md`](src/diagnosis/README.md) | JSONL event schema, diagnosis commands, explainability metrics |
+| Tests | [`tests/README.md`](tests/README.md) | Offline tests, fixtures, outline rules, config schema checks |
+| Progress | [`PROGRESS.md`](PROGRESS.md) | Implementation history, completed work, current constraints |
+
+Each entry doc includes YAML front matter and a `sync_rule`, so later contributors know which docs must be updated when code changes. This is a lightweight knowledge-base pattern for Agent-assisted development.
+
+---
+
+## Architecture Overview
+
+```text
+main.py
+  └── src/controller.py              # State-machine controller
+        ├── parser.py                # Multi-format document parsing
+        ├── planner.py               # Intent understanding, outline generation, outline evaluation
+        ├── retriever.py             # OpenAlex / Crossref / arXiv / Semantic Scholar retrieval
+        ├── ref_store.py             # Reference pool, deduplication, scoring, synonym mapping
+        ├── writing/
+        │   ├── draft_engine.py      # Section-by-section drafting
+        │   ├── revision_engine.py   # Revision and stubborn issue repair
+        │   ├── abstract.py          # Chinese / English abstract generation
+        │   ├── postprocess.py       # Citation, punctuation, overflow, and terminology cleanup
+        │   ├── term_map.py          # Global terminology normalization
+        │   ├── tech_spec.py         # LLM-generated technical specification
+        │   └── locked_tech_spec.py  # User-locked technical facts
+        ├── validation/
+        │   └── evaluator.py         # Static rules + LLM scoring
+        ├── diagnosis/
+        │   ├── recorder.py          # JSONL event recording
+        │   ├── analyzer.py          # Rule aggregation
+        │   ├── metrics.py           # Explainability metrics
+        │   └── report.py            # Rich terminal reports
+        └── presenter.py             # Evaluation panel rendering
 ```
 
 ---
 
-## Agent-readable Knowledge Base
+## Quick Start
 
-每个子系统都有带 YAML front matter 的入口 README，Agent 可以自动定位和使用：
-
-| 模块 | 入口 | 内容 |
-|------|------|------|
-| 撰写 | [`src/writing/README.md`](src/writing/README.md) | 13 个模块职责、能力摘要、运行时序、公开 API |
-| 评估 | [`src/validation/README.md`](src/validation/README.md) | 评分体系、静态规则、降级策略、配置依赖 |
-| 诊断 | [`src/diagnosis/README.md`](src/diagnosis/README.md) | 事件类型表、JSONL 格式、可解释指标 API |
-| 测试 | [`tests/README.md`](tests/README.md) | 离线/在线测试、fixture 规范 |
-| 进度 | [`PROGRESS.md`](PROGRESS.md) | 已完成/进行中/阻塞，95+ 条功能点 |
-
-每个 README 的 `sync_rule` 字段规定了「改哪段代码必须同步更新哪份文档」——这是给后续开发者和 Agent 看的维护契约。
-
----
-
-## 快速开始
-
-### 1. 安装依赖
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 配置密钥
+### 2. Configure secrets
 
 ```bash
 cp config/config.example.yml config/local.secrets.yml
-# 编辑 local.secrets.yml，填入 DeepSeek API Key
+# Edit config/local.secrets.yml and set your DeepSeek API key.
 ```
 
-### 3. 运行
+`config/local.secrets.yml` is ignored by Git.
+
+### 3. Run
 
 ```bash
-# 交互模式
 python main.py
+```
 
-# 带文件和文献
+Example with documents and references:
+
+```bash
 python main.py --files report.docx proposal.pdf --refs my_refs.bib
-
-# 分阶段调试
-python main.py --phase plan          # 只跑到规划完成
-python main.py --phase draft --plan outputs/plan_xxx.json     # 从已有规划续跑
-python main.py --phase eval --plan outputs/plan_xxx.json --paper outputs/paper_xxx.md  # 独立评测
 ```
 
-### 4. 运行诊断
+Example with locked technical facts:
 
 ```bash
-# 查看阶段耗时与评估摘要
-python -m src.diagnosis outputs/run_<session_id>.jsonl
-
-# 查看可解释指标报告（生成耗时、规则命中/消解率、用户时间节省）
-python -c "from src.diagnosis import print_explainability_summary; print_explainability_summary('outputs/run_xxx.jsonl')"
+python main.py --locked-tech-spec config/locked_tech_spec.example.json
 ```
 
 ---
 
-## 测试
+## Tests
 
 ```bash
-# 离线测试（零 API 依赖，54 项）
-python tests/run_offline.py
+# Offline checks: no API calls
+PYTHONIOENCODING=utf-8 python tests/run_offline.py
 
-# 配置 schema 漂移检查
-python tests/config_schema_check.py
+# Config schema check
+PYTHONIOENCODING=utf-8 python tests/config_schema_check.py
 
-# 单元测试
-python -m pytest tests/unit/ -v
+# Pytest unit tests
+PYTHONIOENCODING=utf-8 python -m pytest tests/unit/ -v
 ```
 
-CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）：push/PR 自动跑离线测试 + 配置检查 + 单元测试。
+The offline test entry covers model behavior, writer helpers, static rules, planner normalization, Markdown fixtures, outline fixtures, and writer/evaluator alignment. CI runs the same offline checks on push and pull request.
 
 ---
 
-## 配置说明
+## Repository Safety
 
-| 文件 | Git | 说明 |
-|------|-----|------|
-| `config/config.example.yml` | ✅ | 所有配置项模板（模型、检索、修订循环、字数体系、可解释指标） |
-| `config/locked_tech_spec.example.json` | ✅ | 用户锁定技术事实示例 |
-| `config/local.secrets.yml` | ❌ | 真实密钥，`.gitignore` 忽略 |
+This public snapshot was prepared from a clean repository. Sensitive files are intentionally excluded:
 
----
+- `config/local.secrets.yml`
+- `outputs/`
+- `cache/`
+- `uploads/`
+- generated papers
+- local databases
+- personal resume artifacts
+- real user documents
 
-## 隐私
-
-- `config/local.secrets.yml` 包含真实 API Key，**绝不提交**
-- `outputs/` / `cache/` / `uploads/` 包含运行产物（论文内容、检索记录），**全部 `.gitignore`**
-- 使用云端 API 时用户文档会经网络发送至服务商；敏感材料应脱敏后使用
-
-详见 [`PUBLICATION_CHECKLIST.md`](PUBLICATION_CHECKLIST.md)。
+See [`PUBLICATION_CHECKLIST.md`](PUBLICATION_CHECKLIST.md) for the publication safety checklist.
 
 ---
 
-## 目录结构
+## Suggested Reading Path
 
-```
-lunwencyz/
-├── main.py                  # CLI 入口
-├── PROGRESS.md              # 项目进度（Agent 入口）
-├── PUBLICATION_CHECKLIST.md # 发布安全检查清单
-├── requirements.txt
-├── config/
-│   ├── config.example.yml
-│   └── locked_tech_spec.example.json
-├── src/
-│   ├── controller.py        # 状态机决策控制器
-│   ├── planner.py           # 意图理解与大纲规划
-│   ├── parser.py            # 多格式文件解析
-│   ├── retriever.py         # 自适应文献检索
-│   ├── ref_store.py         # 文献池管理
-│   ├── llm.py               # LLM 客户端
-│   ├── models.py            # Pydantic 数据模型
-│   ├── config.py            # 配置加载
-│   ├── writer.py            # Manuscript ↔ Markdown
-│   ├── presenter.py         # 终端展示层
-│   ├── writing/             # 撰写子包（13 模块）
-│   │   └── README.md        # Agent 入口
-│   ├── validation/          # 评估子包
-│   │   └── README.md        # Agent 入口
-│   └── diagnosis/           # 可观测性子包
-│       ├── README.md        # Agent 入口
-│       ├── metrics.py       # 可解释指标
-│       ├── recorder.py      # 事件采集
-│       └── report.py        # 终端报告
-├── tests/                   # 测试（离线/在线/fixture/单元）
-│   └── README.md            # Agent 入口
-└── .github/workflows/ci.yml # CI
-```
+If you are reviewing the project quickly:
+
+1. Start with [`main.py`](main.py) to see the CLI surface.
+2. Read [`src/controller.py`](src/controller.py) for the state-machine orchestration.
+3. Read [`src/validation/README.md`](src/validation/README.md) to understand the quality gate.
+4. Read [`src/diagnosis/README.md`](src/diagnosis/README.md) to understand traceability.
+5. Run `PYTHONIOENCODING=utf-8 python tests/run_offline.py`.
 
 ---
 
