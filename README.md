@@ -1,5 +1,7 @@
 # LunWen CYZ
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 > A CLI-first Agent for long-form academic writing: state-machine orchestration, multi-source literature retrieval, quality evaluation loops, traceable JSONL execution, and agent-readable module docs.
 
 LunWen CYZ is not a "call an LLM and generate a paper" script. It is an experiment in turning a vague, high-friction writing task into an inspectable Agent workflow: parse materials, plan an outline, retrieve references, draft section by section, evaluate quality, revise with actionable feedback, and leave enough traces for a human or another Agent to debug the run.
@@ -136,27 +138,27 @@ Each entry doc includes YAML front matter and a `sync_rule`, so later contributo
 
 ```text
 main.py
-  └── src/controller.py              # State-machine controller
-        ├── parser.py                # Multi-format document parsing
-        ├── planner.py               # Intent understanding, outline generation, outline evaluation
-        ├── retriever.py             # OpenAlex / Crossref / arXiv / Semantic Scholar retrieval
-        ├── ref_store.py             # Reference pool, deduplication, scoring, synonym mapping
-        ├── writing/
-        │   ├── draft_engine.py      # Section-by-section drafting
-        │   ├── revision_engine.py   # Revision and stubborn issue repair
-        │   ├── abstract.py          # Chinese / English abstract generation
-        │   ├── postprocess.py       # Citation, punctuation, overflow, and terminology cleanup
-        │   ├── term_map.py          # Global terminology normalization
-        │   ├── tech_spec.py         # LLM-generated technical specification
-        │   └── locked_tech_spec.py  # User-locked technical facts
-        ├── validation/
-        │   └── evaluator.py         # Static rules + LLM scoring
-        ├── diagnosis/
-        │   ├── recorder.py          # JSONL event recording
-        │   ├── analyzer.py          # Rule aggregation
-        │   ├── metrics.py           # Explainability metrics
-        │   └── report.py            # Rich terminal reports
-        └── presenter.py             # Evaluation panel rendering
+  `-- src/controller.py              # State-machine controller
+        |-- parser.py                # Multi-format document parsing
+        |-- planner.py               # Intent understanding, outline generation, outline evaluation
+        |-- retriever.py             # OpenAlex / Crossref / arXiv / Semantic Scholar retrieval
+        |-- ref_store.py             # Reference pool, deduplication, scoring, synonym mapping
+        |-- writing/
+        |   |-- draft_engine.py      # Section-by-section drafting
+        |   |-- revision_engine.py   # Revision and stubborn issue repair
+        |   |-- abstract.py          # Chinese / English abstract generation
+        |   |-- postprocess.py       # Citation, punctuation, overflow, and terminology cleanup
+        |   |-- term_map.py          # Global terminology normalization
+        |   |-- tech_spec.py         # LLM-generated technical specification
+        |   `-- locked_tech_spec.py  # User-locked technical facts
+        |-- validation/
+        |   `-- evaluator.py         # Static rules + LLM scoring
+        |-- diagnosis/
+        |   |-- recorder.py          # JSONL event recording
+        |   |-- analyzer.py          # Rule aggregation
+        |   |-- metrics.py           # Explainability metrics
+        |   `-- report.py            # Rich terminal reports
+        `-- presenter.py             # Evaluation panel rendering
 ```
 
 ---
