@@ -1,0 +1,201 @@
+# ============================================================
+# 论文写作智能体 — 配置模板
+# 真实密钥请写入 config/local.secrets.yml（已被 .gitignore 忽略）
+# ============================================================
+
+# --- 密钥（仅写在 local.secrets.yml 中）---
+deepseek_api_key: "PASTE_IN_LOCAL_SECRETS"
+deepseek_base_url: "https://api.deepseek.com"
+deepseek_model: "deepseek-v4-pro"
+# LLM HTTP 超时（秒）。非流式用于规划 / TechSpec / 评估 JSON（chat_json）；Pro 或长稿若报 Request timed out 可再调大 read_blocking。
+deepseek_timeout_connect: 30
+deepseek_timeout_read_blocking: 300
+deepseek_timeout_read_stream: 120
+
+# --- 检索与写作循环 ---
+max_search_rounds: 3
+min_references: 20
+min_foreign_references: 5
+max_revision_rounds: 3
+# 并行撰写（DRAFT 阶段正文各章并行；禁用时串行生成，prev_chapter_excerpt 可用）
+parallel_draft: false
+# 并行修订（REVISE 阶段各章并行；禁用时串行修订）
+parallel_revise: false
+# thesis_mode 下：仅当 static_rule_issues 中无 severity=error 且 LLM 总分 ≥ stop_on_rule_pass_min_score 时可按此项提前停止修订（低分保护）
+stop_on_rule_pass: true
+stop_on_rule_pass_min_score: 8.0  # 静态规则全过时仍需达到的最低 LLM 评分
+quality_threshold: 9.0
+# 评估后「硬规则快照」面板最多展示几条 StaticRuleIssue（message 摘要）
+panel_static_summary_max_items: 5
+# true：actionable 指纹在【标签】|章节后追加少量正文关键词子串，区分同类不同表述（指纹更细）
+actionable_fingerprint_include_keywords: false
+# 章节越界清洗：对无 # 前缀的「第N+1章」等拖尾，仅在每节正文最后若干比例内扫描（默认最后 30%）
+section_overflow_tail_scan_fraction: 0.3
+max_refs_total: 40          # 参考文献硬上限（本科论文建议30-50）
+min_ref_relevance_score: 0.01
+
+# 允许文献引用的章节（section_id 列表）。仅这些章节的撰写 prompt 会注入参考文献上下文，
+# 且正文中允许出现 [n] 引用标记。其他章节的引用会被 postprocess 强制删除 + 评估报 error。
+# 默认 ["s1", "s2"]（引言 + 相关工作）。
+citation_enabled_sections:
+  - s1
+  - s2
+
+# 参考文献是否放在致谢之前（默认 false，即致谢 → 参考文献）
+# 仅影响最终输出顺序，不影响 LLM 各章的引用权限
+reference_before_acknowledgment: false
+
+# 传感器测试覆盖清单注入的章节（默认 s5；可设为 ["s4"] 或其他组合）
+sensor_checklist_sections:
+  - s5
+
+# 硬件内容越界检测的章节（默认 s2；留空 `[]` 全不检查）
+hardware_overflow_check_sections:
+  - s2
+
+# --- 人机断点 ---
+ask_confirm_outline: false  # true: 规划后暂停等用户确认大纲
+
+# --- 运行诊断（JSONL 事件，不含正文/密钥）---
+diagnostics_enabled: true  # false 关闭写入 outputs/run_<session>.jsonl
+
+# ── 可解释指标（DONE 阶段输出可解释性报告）──
+explainability:
+  enabled: true                         # DONE 后展示可解释指标报告
+  user_time_saved:
+    manual_draft_speed_cph: 500         # 人工初稿速度（字/小时）
+    manual_revise_speed_cph: 800        # 人工修订速度（字/小时）
+    manual_format_speed_cph: 2000       # 人工格式调整速度（字/小时）
+    hours_per_session: 3                # 单次有效工作时长（小时）
+  top_rules_n: 5                        # 高频规则展示数量
+
+# --- 超长文档处理 ---
+max_document_pages_soft: 100
+max_parsed_chars_per_file: 400000
+long_document_strategy: "relevance_extract"
+
+# --- Semantic Scholar API Key（可选，不填仍可用但 rate limit 较低）---
+semantic_scholar_api_key: "PASTE_IN_LOCAL_SECRETS"  # 真实 key 写 local.secrets.yml
+
+# --- Crossref 礼貌标识（非密钥）---
+crossref_mailto: "your-email@example.com"
+
+# --- 对话记忆 ---
+conversation_max_recent_turns: 20
+
+# --- 引用体例 ---
+# 毕业论文规范：正文内 [1] 上标数字，参考文献列表用 [J][M][C][D][EB/OL] 格式
+citation_style: "numeric"
+
+# ============================================================
+# 毕业论文专项配置（thesis_mode: true 时生效）
+# ============================================================
+thesis_mode: true
+
+# 论文类型: computer_software | engineering_design | comprehensive | arts | humanities
+# 影响字数下限要求
+thesis_type: "computer_software"
+
+# 各类型字数下限（字）
+thesis_min_words:
+  computer_software: 8000
+  engineering_design: 8000
+  comprehensive: 10000
+  arts: 8000
+  humanities: 10000
+
+# 正文目标总字数（合理区间）
+thesis_target_words_min: 25000
+thesis_target_words_max: 30000
+
+# 各章节目标字数（供写作模块参考，键名须与 section_id 一致）
+thesis_section_words:
+  abstract_zh:    600    # 中文摘要 500-800字
+  abstract_en:    400    # 英文摘要（与中文对应）
+  s1:             2500   # 第1章 引言
+  s2:             4000   # 第2章 系统总体设计/技术综述
+  s3:             5500   # 第3章 硬件设计/方法
+  s4:             5500   # 第4章 软件设计/实现
+  s5:             4000   # 第5章 实验测试与分析
+  s6:             1500   # 第6章 结论
+  acknowledgment:  300   # 致谢
+
+# 关键词要求
+thesis_keywords_min: 3
+thesis_keywords_max: 5
+
+# 用户锁定技术事实（L1，可选）：与 LLM TechSpec 同结构的 JSON，深合并后锁定层覆盖同键。
+# 可复制 config/locked_tech_spec.example.json 为 config/locked_tech_spec.json 并填写；空字符串表示不使用文件。
+# 也可用环境变量 LUNWENCYZ_LOCKED_TECH_SPEC 覆盖为本路径。
+locked_tech_spec_path: ""
+
+# 章节规则覆盖（可选）：按 section_id 覆盖 _SECTION_RULES 硬编码默认值。
+# 当老师/学校对某章节有特殊要求时（如"第三章只讲总体设计不展开模块"），在此配置。
+# 键为 section_id（如 s3/s4/s5），值为替换后的完整规则文本。
+override_section_rules: {}
+# override_section_rules:
+#   s3: "本章只做总体设计层面的描述。禁止给出具体的电路原理图、PCB布局、引脚连接表、寄存器配置代码。应聚焦于系统需求分析、总体架构设计、软硬件分工和流程设计。"
+#   s4: "本章同时描述硬件电路设计（含原理图要点、模块选型理由）和软件程序设计（含流程图、主要函数说明），两者并重。"
+#   s5: "本章描述系统实现过程（硬件搭建、软件编码）与调试中遇到的问题，最后给出功能测试结果与分析。"
+
+# TechSpec 中 hardware.mcu.model 含 STM32 且此项 enabled=true 时：postprocess 将除参考文献外各节中
+# 独立词 ESP8266、ESP32 替换为该 MCU 型号（缓解静态「摘要 STM32 / 正文 ESP」误报；相关工作若大量讨论他人 ESP 方案请保持 false）。
+mcu_platform_normalize:
+  enabled: false
+  # 非空时仅处理列表内 section_id；空列表表示除 refs 外均可能处理（仍尊重 skip_section_ids）
+  only_section_ids: []
+  # 不做 ESP→MCU 替换的节（如 s2 相关工作常引他人 ESP 方案）
+  skip_section_ids: []
+  # 行内含下列任一子串则该行不替换（防误伤文献综述句式）
+  protect_line_substrings:
+    - "文献"
+    - "指出"
+    - "该文"
+    - "论文中"
+    - "对比"
+    - "参考文献"
+
+# --- 初稿多候选（仅 thesis 初稿；分块章节不启用；修订阶段不启用）---
+# section_id 须与大纲一致：毕业论文为 s1…s6、abstract_zh、acknowledgment 等（不是 introduction/design 英文名）。
+# 可追加 abstract_zh；**不宜**对 s1（引言）/ s6（结论）启用（易结构越界）。s2～s5 字数大时常走分块，分块时不走多候选。
+multi_candidate:
+  enabled: false
+  section_ids:
+    - s3
+    - s4
+  n: 3
+  llm_score_threshold: 6.0
+  rule_prefilter: true
+  parallel: false
+  temperature_jitter: 0.04
+
+# --- 章节 scope 校验（must_include / scope_forbidden 子串；初稿每章生成后，默认最多重试 1 次全文）---
+scope_validation:
+  enabled: true
+  retry_once: true
+
+# --- 子节串行初稿：规划含 subsections 时按子节多次调用 LLM 再拼接（与分块撰写、多候选互斥）---
+subsections_sequential_draft:
+  enabled: false
+
+# --- 按 section_id 写入大纲边界（合并进 SectionNode，规划之后、撰写之前生效）---
+# 示例：s3: { scope_forbidden: ["完整源代码"], scope_must_include: ["系统框图"] }
+outline_scope_overrides: {}
+
+# --- L3-A：TechSpec 中传感器型号的常见错写 → 规范名（postprocess 中与 term_map 合并，term_map 优先覆盖同键）---
+l3a_tech_spec_enforce:
+  enabled: true
+  sensor_alias_table: {}  # 可选：DHT11: ["DS18B20"] 额外错写列表
+l3a_manual_replacements: {}  # 可选：{"错写": "正写"}
+
+# 论文类型（设计/论文），影响页眉文字
+thesis_category: "论文"   # 或 "设计"
+# 学校名称（用于页眉）
+thesis_school: "沈阳工业大学"
+
+# ============================================================
+# 大纲评分门禁（PLAN 阶段后自动评估）
+# ============================================================
+outline_evaluation_enabled: true         # 是否启用大纲评分门禁
+outline_evaluation_threshold: 7.5        # 大纲总分门槛（0-10），达到后通过
+outline_evaluation_max_revision_rounds: 2  # 不通过时最多自动修订轮次

@@ -1,0 +1,21 @@
+{
+  "_comment": "复制本文件为 config/locked_tech_spec.json（或任意路径），在 config 中设置 locked_tech_spec_path；仅需填写要锁定的字段，会与 LLM 生成的 TechSpec 深合并，同键由本文件覆盖。",
+
+  "hardware": {
+    "mcu": {
+      "model": "STC89C52RC"
+    },
+    "sensors": [
+      {
+        "name": "空气温湿度",
+        "model": "DHT11",
+        "type": "数字式温湿度复合传感器",
+        "interface": "单总线",
+        "notes": "全文不得改为 DS18B20 等其它型号"
+      }
+    ]
+  },
+  "forbidden_content": [
+    "禁止将 DHT11 写成 DS18B20 或与锁定硬件表矛盾的其它温度传感器型号"
+  ]
+}

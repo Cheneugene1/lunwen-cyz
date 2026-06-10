@@ -1,0 +1,46 @@
+case_id: outline_bad_top_subsection
+thesis_mode: true
+expected_rules:
+  - THESIS_EXTRA_SECTIONS
+forbidden_rules: []
+keywords:
+  - 单片机
+  - 温湿度
+  - 传感器
+  - 数据采集
+  - 嵌入式系统
+search_queries:
+  - 温湿度 STM32
+outline:
+  - section_id: s1
+    title: 第1章 引言
+    bullets:
+      - 背景
+  - section_id: s2
+    title: 第2章 综述
+    bullets:
+      - 综述
+  - section_id: s3
+    title: 第3章 方法
+    bullets:
+      - 方法
+  - section_id: s3_1
+    title: 3.1 子方法一
+    bullets:
+      - 细节
+  - section_id: s3_2
+    title: 3.2 子方法二
+    bullets:
+      - 细节
+  - section_id: s4
+    title: 第4章 实验
+    bullets:
+      - 实验
+  - section_id: s5
+    title: 第5章 分析
+    bullets:
+      - 分析
+  - section_id: s6
+    title: 第6章 结论
+    bullets:
+      - 结论

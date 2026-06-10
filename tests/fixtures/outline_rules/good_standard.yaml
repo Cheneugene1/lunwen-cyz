@@ -1,0 +1,57 @@
+case_id: outline_good_standard
+thesis_mode: true
+expected_rules: []
+forbidden_rules:
+  - THESIS_CHAPTER_PREFIX
+  - THESIS_EXTRA_SECTIONS
+keywords:
+  - 单片机
+  - 温湿度
+  - 传感器
+  - 数据采集
+  - 嵌入式系统
+search_queries:
+  - 温湿度 STM32
+outline:
+  - section_id: s1
+    title: 第1章 引言
+    bullets:
+      - 研究背景与意义
+      - 国内外研究现状
+      - 本文主要工作
+  - section_id: s2
+    title: 第2章 系统总体设计
+    bullets:
+      - 需求分析
+      - 总体方案
+      - 器件选型
+  - section_id: s3
+    title: 第3章 硬件系统设计
+    bullets:
+      - 主控电路
+      - 传感器接口
+      - 显示模块
+  - section_id: s4
+    title: 第4章 软件系统设计
+    bullets:
+      - 主程序流程
+      - 数据采集
+      - 显示控制
+  - section_id: s5
+    title: 第5章 系统测试与分析
+    bullets:
+      - 功能测试
+      - 精度分析
+      - 功耗分析
+  - section_id: s6
+    title: 第6章 结论与展望
+    bullets:
+      - 工作总��
+      - 创新点
+      - 未来工作
+abstract_zh:
+  title: 摘要
+acknowledgment:
+  title: 致谢
+refs:
+  title: 参考文献
