@@ -6,7 +6,7 @@
 
 ## P0 — 文件安全网（不修不能公开）
 
-- [ ] `.gitignore` 已忽略：
+- [x] `.gitignore` 已忽略：
   - `.claude/` — Claude Code IDE 项目级配置与 session 数据
   - `config/local.secrets.yml` — 真实 API Key
   - `resume_output/` — 个人简历运行产物
@@ -16,10 +16,10 @@
   - `doc/PROJECT_DOCUMENTATION.md` — 含项目内部文档截图
   - `outputs/` / `cache/` / `uploads/` — 运行时产物（论文内容、检索记录、SQLite 会话库）
 
-- [ ] 已从 Git 跟踪中移除：
+- [x] 已从 Git 跟踪中移除：
   - `doc/信息学院赵江滔本科毕业设计...doc` — rm --cached 但文件保留本地
 
-- [ ] 不存在的风险确认：
+- [x] 不存在的风险确认：
   - `config/local.secrets.yml` 从未被提交 ✓（已在 .gitignore）
   - `outputs/` `cache/` `uploads/` 从未被提交 ✓（已在 .gitignore）
   - `.claude/` 从未被提交 ✓（现已加入 .gitignore）
@@ -42,8 +42,8 @@
   - `run_offline.py` 已覆盖 fixture / outline fixture / 静态规则 / writer-evaluator 对齐等 ✅
   - `config_schema_check.py` 已运行 ✅
   - 最后一步 `pytest tests/unit/` 覆盖不全——`tests/unit/` 仅 4 个文件，但 `run_offline.py` 已做了大量检查。可保留不改，或改名 `Pytest unit tests` 避免误导
-- [ ] `doc/reports/design_explainability_metrics.md` 已纳入跟踪 ✓
-- [ ] `doc/reports/2026-06-02_*.md`（问题调查报告 + 修复方案）已核实无 PII/无密钥 ✓
+- [x] `doc/reports/design_explainability_metrics.md` 已纳入跟踪 ✓
+- [x] `doc/reports/2026-06-02_*.md`（问题调查报告 + 修复方案）已核实无 PII/无密钥 ✓
 
 ---
 
